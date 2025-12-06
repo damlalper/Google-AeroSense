@@ -1,0 +1,440 @@
+version: '3.9'
+
+#################################################
+# Aero-Sense Local Development Environment
+# Google Cloud Partner Hackathon 2025
+# Services: Kafka, Zookeeper, Redis, PostgreSQL, Datadog Agent
+#################################################
+
+networks:
+  aero-sense-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  kafka-data:
+  zookeeper-data:
+  zookeeper-logs:
+  redis-data:
+  postgres-data:
+
+services:
+  #################################################
+  # Zookeeper - Required for Kafka
+  #################################################
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.3
+    container_name: aero-sense-zookeeper
+    hostname: zookeeper
+    networks:
+      - aero-sense-network
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 5
+      ZOOKEEPER_INIT_LIMIT: 10
+      ZOOKEEPER_MAX_CLIENT_CNXNS: 60
+      ZOOKEEPER_AUTOPURGE_SNAP_RETAIN_COUNT: 3
+      ZOOKEEPER_AUTOPURGE_PURGE_INTERVAL: 24
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  #################################################
+  # Kafka - Message Broker (Local Development)
+  # Note: In production, use Confluent Cloud
+  #################################################
+  kafka:
+    image: confluentinc/cp-kafka:7.5.3
+    container_name: aero-sense-kafka
+    hostname: kafka
+    networks:
+      - aero-sense-network
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+      - "9094:9094"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      # Listener Configuration
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093,DOCKER://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9093,DOCKER://host.docker.internal:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,DOCKER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
+      # Topic Configuration
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+
+      # Performance Tuning
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
+      KAFKA_COMPRESSION_TYPE: snappy
+
+      # JVM Settings
+      KAFKA_HEAP_OPTS: "-Xmx1G -Xms1G"
+      KAFKA_JVM_PERFORMANCE_OPTS: "-XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  #################################################
+  # Kafka UI - Web Interface for Kafka Management
+  #################################################
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: aero-sense-kafka-ui
+    networks:
+      - aero-sense-network
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: aero-sense-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  #################################################
+  # Redis - Caching Layer for Weather API
+  #################################################
+  redis:
+    image: redis:7.2-alpine
+    container_name: aero-sense-redis
+    hostname: redis
+    networks:
+      - aero-sense-network
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --loglevel notice
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  #################################################
+  # Redis Commander - Web UI for Redis
+  #################################################
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: aero-sense-redis-ui
+    networks:
+      - aero-sense-network
+    ports:
+      - "8081:8081"
+    environment:
+      REDIS_HOSTS: local:redis:6379
+      HTTP_USER: admin
+      HTTP_PASSWORD: admin
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  #################################################
+  # PostgreSQL - Metadata & Configuration Storage
+  #################################################
+  postgres:
+    image: postgres:16-alpine
+    container_name: aero-sense-postgres
+    hostname: postgres
+    networks:
+      - aero-sense-network
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: aerosense
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecurePassword123!}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d aerosense"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  #################################################
+  # Datadog Agent - Observability & Monitoring
+  # NOTE: Requires DATADOG_API_KEY in .env file
+  #################################################
+  datadog-agent:
+    image: gcr.io/datadoghq/agent:7
+    container_name: aero-sense-datadog
+    hostname: datadog-agent
+    networks:
+      - aero-sense-network
+    ports:
+      - "8125:8125/udp"  # DogStatsD
+      - "8126:8126/tcp"  # APM
+    environment:
+      # API Configuration
+      DD_API_KEY: ${DATADOG_API_KEY}
+      DD_SITE: ${DATADOG_SITE:-datadoghq.com}
+
+      # Agent Configuration
+      DD_HOSTNAME: aero-sense-local
+      DD_TAGS: "env:local project:aero-sense hackathon:google-cloud-2025"
+
+      # DogStatsD Configuration
+      DD_DOGSTATSD_NON_LOCAL_TRAFFIC: "true"
+      DD_DOGSTATSD_SOCKET: /var/run/datadog/dsd.socket
+      DD_DOGSTATSD_ORIGIN_DETECTION: "true"
+
+      # APM Configuration
+      DD_APM_ENABLED: "true"
+      DD_APM_NON_LOCAL_TRAFFIC: "true"
+      DD_APM_RECEIVER_SOCKET: /var/run/datadog/apm.socket
+
+      # Logs Configuration
+      DD_LOGS_ENABLED: "true"
+      DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: "true"
+      DD_LOGS_CONFIG_DOCKER_LABELS_AS_TAGS: '{"*":true}'
+
+      # Process Monitoring
+      DD_PROCESS_AGENT_ENABLED: "true"
+
+      # Container Monitoring
+      DD_CONTAINER_EXCLUDE: "name:datadog-agent"
+      DD_DOCKER_LABELS_AS_TAGS: '{"*":true}'
+
+      # Integration: Kafka
+      DD_KAFKA_CONSUMER_OFFSETS: "true"
+
+      # Integration: Redis
+      DD_REDIS_HOST: redis
+      DD_REDIS_PORT: 6379
+
+      # Integration: PostgreSQL
+      DD_POSTGRES_HOST: postgres
+      DD_POSTGRES_PORT: 5432
+      DD_POSTGRES_USERNAME: admin
+      DD_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecurePassword123!}
+      DD_POSTGRES_DBNAME: aerosense
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    healthcheck:
+      test: ["CMD", "agent", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  #################################################
+  # Ingestion Service (Go) - Development Mode
+  # Built from local Dockerfile
+  #################################################
+  ingestion-service:
+    build:
+      context: ./services/ingestion-go
+      dockerfile: Dockerfile
+    container_name: aero-sense-ingestion
+    hostname: ingestion-service
+    networks:
+      - aero-sense-network
+    ports:
+      - "8000:8080"
+    environment:
+      # Service Configuration
+      SERVICE_NAME: ingestion-service
+      SERVICE_VERSION: 1.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: telemetry.enriched
+      KAFKA_COMPRESSION: snappy
+      KAFKA_ACKS: all
+      KAFKA_RETRIES: 3
+
+      # Redis Configuration
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      REDIS_PASSWORD: ""
+      REDIS_TTL: 3600
+
+      # OpenWeather API
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY}
+      OPENWEATHER_BASE_URL: https://api.openweathermap.org/data/2.5
+
+      # Datadog
+      DD_AGENT_HOST: datadog-agent
+      DD_DOGSTATSD_PORT: 8125
+      DD_TRACE_AGENT_PORT: 8126
+      DD_ENV: local
+      DD_SERVICE: ingestion-service
+      DD_VERSION: 1.0.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      datadog-agent:
+        condition: service_started
+    restart: unless-stopped
+    profiles:
+      - full-stack  # Only start with: docker-compose --profile full-stack up
+
+  #################################################
+  # AI Core Service (Python) - Development Mode
+  # Built from local Dockerfile
+  #################################################
+  ai-core-service:
+    build:
+      context: ./services/ai-core-py
+      dockerfile: Dockerfile
+    container_name: aero-sense-ai-core
+    hostname: ai-core-service
+    networks:
+      - aero-sense-network
+    ports:
+      - "8001:8000"
+    environment:
+      # Service Configuration
+      SERVICE_NAME: ai-core-service
+      SERVICE_VERSION: 1.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: telemetry.enriched
+      KAFKA_CONSUMER_GROUP: ai-core-consumers
+      KAFKA_AUTO_OFFSET_RESET: earliest
+
+      # Google Cloud (will use local mock in dev)
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+      VERTEX_AI_ENDPOINT_ID: ${VERTEX_AI_ENDPOINT_ID}
+      VERTEX_AI_LOCATION: ${VERTEX_AI_LOCATION:-us-central1}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+
+      # Database
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: aerosense
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SecurePassword123!}
+
+      # Datadog
+      DD_AGENT_HOST: datadog-agent
+      DD_DOGSTATSD_PORT: 8125
+      DD_TRACE_AGENT_PORT: 8126
+      DD_ENV: local
+      DD_SERVICE: ai-core-service
+      DD_VERSION: 1.0.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      datadog-agent:
+        condition: service_started
+    restart: unless-stopped
+    profiles:
+      - full-stack
+
+  #################################################
+  # Dashboard UI (Next.js) - Development Mode
+  #################################################
+  dashboard-ui:
+    build:
+      context: ./services/web-ui
+      dockerfile: Dockerfile
+    container_name: aero-sense-dashboard
+    hostname: dashboard-ui
+    networks:
+      - aero-sense-network
+    ports:
+      - "3000:3000"
+    environment:
+      # Next.js Configuration
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:8001
+
+      # Google Maps
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
+
+      # Datadog RUM
+      NEXT_PUBLIC_DATADOG_CLIENT_TOKEN: ${DATADOG_CLIENT_TOKEN}
+      NEXT_PUBLIC_DATADOG_APPLICATION_ID: ${DATADOG_APPLICATION_ID}
+    depends_on:
+      - ai-core-service
+    restart: unless-stopped
+    profiles:
+      - full-stack
+
+#################################################
+# Health Check Service (Optional)
+# Monitors all services and exposes /health endpoint
+#################################################
+  healthcheck:
+    image: alpine:latest
+    container_name: aero-sense-healthcheck
+    networks:
+      - aero-sense-network
+    command: >
+      sh -c "
+        apk add --no-cache curl &&
+        while true; do
+          echo '=== Health Check ===' &&
+          curl -f http://kafka:9092 || echo 'Kafka: DOWN' &&
+          curl -f http://redis:6379 || echo 'Redis: DOWN' &&
+          sleep 60
+        done
+      "
+    depends_on:
+      - kafka
+      - redis
+    restart: unless-stopped
+    profiles:
+      - monitoring

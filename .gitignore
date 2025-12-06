@@ -1,0 +1,459 @@
+#################################################
+# Aero-Sense .gitignore
+# Google Cloud Partner Hackathon 2025
+#################################################
+
+#################################################
+# SENSITIVE FILES - NEVER COMMIT
+#################################################
+.env
+.env.local
+.env.production
+.env.*.local
+*.key
+*.pem
+*.p12
+*-key.json
+service-account*.json
+credentials.json
+secrets/
+*.secret
+
+#################################################
+# GOOGLE CLOUD CREDENTIALS
+#################################################
+**/google-credentials.json
+**/gcp-*.json
+application_default_credentials.json
+
+#################################################
+# API KEYS & TOKENS
+#################################################
+.api-keys
+*.token
+.datadog-api-key
+.openweather-key
+.gemini-key
+
+#################################################
+# OPERATING SYSTEM FILES
+#################################################
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.directory
+.Trash-*
+
+#################################################
+# IDEs & EDITORS
+#################################################
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.history/
+
+# JetBrains IDEs (IntelliJ, GoLand, PyCharm)
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+out/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+Sessionx.vim
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+
+#################################################
+# GOLANG
+#################################################
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+coverage.html
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Build artifacts
+services/ingestion-go/bin/
+services/ingestion-go/tmp/
+
+#################################################
+# PYTHON
+#################################################
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+pytestdebug.log
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+services/ai-core-py/venv/
+services/ai-core-py/.venv/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# Poetry
+poetry.lock
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+#################################################
+# NODE.JS / NEXT.JS
+#################################################
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Production
+services/web-ui/.next/
+services/web-ui/out/
+services/web-ui/build/
+
+# Misc
+.vercel
+.turbo
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Package manager lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+#################################################
+# DOCKER
+#################################################
+# Docker volumes
+docker-compose.override.yml
+.docker/
+
+#################################################
+# DATABASES
+#################################################
+# PostgreSQL
+*.sql.gz
+*.dump
+pgdata/
+
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+#################################################
+# LOGS
+#################################################
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# Runtime logs
+*.pid
+*.seed
+*.pid.lock
+
+#################################################
+# TERRAFORM
+#################################################
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files
+*.tfvars
+*.tfvars.json
+
+# Ignore override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Lock file (optional - some teams commit this)
+.terraform.lock.hcl
+
+#################################################
+# DATA & MODELS
+#################################################
+# Large data files
+data/*.txt
+data/*.csv
+data/*.zip
+data/*.tar.gz
+!data/README.md
+!data/.gitkeep
+
+# Model artifacts
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.pt
+models/*.pth
+models/*.onnx
+models/checkpoints/
+models/saved_models/
+!models/README.md
+!models/.gitkeep
+
+# Training outputs
+models/runs/
+models/logs/
+models/tensorboard/
+
+#################################################
+# MONITORING & OBSERVABILITY
+#################################################
+# Datadog
+.datadog/
+
+# Prometheus
+prometheus/data/
+
+#################################################
+# TEMPORARY FILES
+#################################################
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*.swo
+*~.nib
+local.properties
+.loadpath
+
+#################################################
+# BUILD ARTIFACTS
+#################################################
+*.class
+*.war
+*.nar
+*.ear
+*.tar
+*.rar
+
+#################################################
+# TESTING
+#################################################
+test-results/
+test-reports/
+.coverage
+htmlcov/
+
+#################################################
+# MISC
+#################################################
+.env.backup
+*.orig
+.vscode-test
+
+#################################################
+# KAFKA / CONFLUENT
+#################################################
+kafka-data/
+zookeeper-data/
+
+#################################################
+# MACHINE LEARNING
+#################################################
+# Jupyter
+*.ipynb_checkpoints
+
+# Weights & Biases
+wandb/
+
+# MLflow
+mlruns/
+
+# DVC
+.dvc/
+*.dvc
+
+#################################################
+# CLOUD STORAGE
+#################################################
+# GCS mounted directories
+gcs-bucket/
+
+#################################################
+# DOCUMENTATION
+#################################################
+# Sphinx documentation
+docs/_build/
+site/
+
+# Generated docs
+*.docx
+*.pdf
+!docs/*.pdf
+
+#################################################
+# PROJECT SPECIFIC
+#################################################
+# Traffic generator outputs
+scripts/output/
+scripts/logs/
+
+# Demo video (too large for git)
+*.mp4
+*.mov
+*.avi
+!docs/demo-thumbnail.jpg
+
+# Exported Datadog configs (keep JSONs)
+!monitoring/**/*.json
+
+#################################################
+# KEEP FILES
+#################################################
+# Ensure empty directories are tracked
+!**/.gitkeep
