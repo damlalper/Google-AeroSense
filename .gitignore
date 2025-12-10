@@ -193,7 +193,7 @@ services/ai-core-py/.venv/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-*.ipynb
+
 
 # pyenv
 .python-version
@@ -329,8 +329,18 @@ data/*.txt
 data/*.csv
 data/*.zip
 data/*.tar.gz
+data/**/*.txt
+data/**/*.csv
+data/**/*.zip
+data/**/*.pdf
+data/6. Turbofan Engine Degradation Simulation Data Set/
+data/turbofan*/
+data/batteries*/
+data/bearings*/
+data/femto*/
 !data/README.md
 !data/.gitkeep
+!data/sample*.json
 
 # Model artifacts
 models/*.pkl

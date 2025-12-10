@@ -396,3 +396,483 @@ Bu bölüm, sistemin **kullanıcı perspektifinden anlaşılmasını ve test edi
 - User intent ve sistem tepkisi açık şekilde eşleştirildi.  
 - Edge case’ler sayesinde model, "ne zaman hangi fallback kullanılır" mantığını doğru anlayabilir.
 
+
+
+
+
+# NEW
+# IMPLEMENTATION-MUST DO AND DATA-
+### 📅 Tarih: 7 Aralık 2025  
+### 🎯 Hedef: Google Cloud Hackathon (Datadog & Confluent Tracks)  
+### ⏳ Son Teslim: 1 Ocak 2026
+
+---
+
+# 🏛️ BÖLÜM 1: İDARİ & KAYNAK YÖNETİMİ (SENİN GÖREVİN)
+
+Bu bölüm hackathon kayıtları, ücretsiz krediler ve API anahtarlarıyla ilgili. **En kısa sürede tamamlanmalı.**
+
+### ✔️ Yapılacaklar
+
+- [ ] **Devpost Kaydı**  
+  → https://aiinaction.devpost.com adresinden **Join Hackathon** butonuna tıkla.
+
+- [ ] **Datadog Webinar Kaydı (KRİTİK)**  
+  **Tarih:** 9 Aralık, 09:00 EST (TSİ ≈ 17:00)  
+  → Hackathon sayfasındaki linkten kayıt ol.  
+  → **+30 gün ek süreyi kap.**
+
+- [ ] **Google Cloud Kredisi ($50)**  
+  → Hackathon sayfasındaki formu doldur.  
+  **Not:** Mailine gelen kredi kodunu sakla.  
+  **Hemen Redeem etme!**  
+  Vertex AI eğitimine 2. hafta başlarken kullanılacak.  
+  **Son kullanma:** 15 Aralık.
+
+- [ ] **Confluent Cloud Hesabı**  
+  → Hesap aç.  
+  → *Billing → Payment* bölümüne `CONFLUENTDEV1` kampanya kodunu ekle.  
+  → 30 gün ücretsiz kullanım açılacak.
+
+- [ ] **OpenWeatherMap API Key**  
+  → https://openweathermap.org  
+  → Üye ol → **My API Keys** → Yeni API key oluştur → Kaydet.
+
+---
+
+# 💻 BÖLÜM 2: YEREL GELİŞTİRME ORTAMI (SENİN GÖREVİN)
+
+Bilgisayarını bir Google mühendisi set-up’ına çeviriyoruz.
+
+- [ ] **Go (Golang) Kurulumu**  
+  → https://go.dev/dl adresinden indir & kur  
+  **Test:**  
+go version
+
+
+
+- [ ] **Python 3.9+ Kontrolü**  
+Sisteminde Python zaten var, ama **3.9+ olmalı**.
+
+- [ ] **Docker Kurulumu**  
+→ Docker Desktop indir, kur, çalıştır.
+
+- [ ] **Google Cloud SDK (gcloud CLI)**  
+→ https://cloud.google.com/sdk/docs/install  
+**Komut:**  
+gcloud init
+
+
+
+- [ ] **VS Code Eklentileri**
+- Go (Go Team at Google)
+- Python (Microsoft)
+- HCL (Terraform için)
+- Docker
+
+---
+
+# ☁️ BÖLÜM 3: BULUT HESAP KURULUMLARI (SENİN GÖREVİN)
+
+### ✔️ Google Cloud
+
+- [ ] **Yeni Proje Oluştur**  
+→ *aero-sense-hackathon*
+
+- [ ] **Aşağıdaki API’ları Enable et**
+- Vertex AI API  
+- Cloud Run API  
+- Artifact Registry API  
+- Cloud Build API
+
+### ✔️ Datadog
+
+- [ ] Datadog hesabı oluştur (Region: **US**)  
+**Not:** US en uyumlu bölge.  
+
+- [ ] API Key ve Application Key oluştur → Not et.
+
+---
+
+# 📂 BÖLÜM 4: REPO & VERİ HAZIRLIĞI (SENİN GÖREVİN)
+
+### ✔️ GitHub
+
+- [ ] **Yeni repo aç:** `aero-sense-hackathon`  
+- [ ] Repoyu klonla:  
+git clone <repo-url>
+
+
+
+### ✔️ Lisans Dosyası
+
+- [ ] Ana dizine **LICENSE** dosyası ekle.  
+İçerik: MIT License veya Apache 2.0 (Hackathon zorunluluğu).
+
+### ✔️ Proje Klasörleri
+
+mkdir -p data/raw
+mkdir -p services/ingestion-go
+mkdir -p services/ai-core-python
+mkdir -p infra
+mkdir -p docs
+
+
+### ✔️ NASA CMAPSS Verisi
+
+- [ ] NASA CMAPSS dataset indir.  
+- [ ] `train_FD001.txt` dosyasını  
+  `data/raw/` klasörüne koy.
+
+---
+
+# 🤖 BÖLÜM 5: CLAUDE İLE KODLAMA (CLAUDE'UN GÖREVİ)
+
+Aşağıdaki adımları **sırayla Claude’a yazacaksın.**
+
+---
+
+## ✅ Adım 1 — Go Ingestion Servisi (Veri Toplama)
+
+Claude'a şu promptu gönder:
+
+Sana daha önce verdiğim 'Project Master File'a sadık kalarak; services/ingestion-go klasörü altında çalışacak bir Go uygulaması istiyorum.
+
+data/raw/train_FD001.txt dosyasını satır satır okusun.
+
+OpenWeatherMap API'sinden (şimdilik mock fonksiyon) hava verisi çeksin.
+
+Bu iki veriyi bir JSON struct'ta birleştirsin.
+
+datadog-go/statsd kütüphanesini kullanarak her okumada aero.ingestion.events metriğini artırsın.
+
+Bana main.go, go.mod ve Dockerfile içeriklerini ver.
+
+
+
+---
+
+## ✅ Adım 2 — Kafka Producer Entegrasyonu
+
+Claude'a devam promptu:
+
+Harika. Şimdi bu koda Confluent Kafka entegrasyonu ekle.
+github.com/confluentinc/confluent-kafka-go kütüphanesini kullan.
+
+Okuduğun veriyi telemetry.raw topiğine gönder.
+
+Gönderirken Kafka Header'ına trace_id (UUID) eklemeyi unutma (Datadog tracing için).
+
+
+---
+
+## ✅ Adım 3 — Python AI Servisi (Kafka Consumer)
+
+Claude'a şu promptu gönder:
+
+Şimdi services/ai-core-python klasörüne geçelim. Python ve FastAPI kullanarak bir Kafka Consumer yazmanı istiyorum.
+
+telemetry.raw topiğini dinlesin.
+
+Gelen mesajdaki trace_id'yi okusun ve ddtrace kütüphanesi ile context'i devam ettirsin.
+
+Şimdilik Vertex AI'a gitmeden sadece log bassın.
+
+requirements.txt, main.py ve Dockerfile ver.
+
+
+---
+
+# 🚀 SONRAKİ ADIM (BU LİSTE BİTİNCE ELİNDE OLACAK)
+
+- Tüm hesaplar açılmış  
+- NASA verileri indirilmiş  
+- Go ingestion servisi hazır  
+- Kafka producer entegre edilmiş  
+- Python tüketici servisi hazır  
+- Log/Trace/Metrics altyapısı kurulum aşamasında  
+- Tümü GitHub’a pushlanmış
+
+---
+
+# 🛡️ BÖLÜM 6: DATADOG ADVANCED IMPLEMENTATION PLAN
+
+Bu plan **jürinin en çok etkileneceği** kısım.  
+Claude ve sen bunu uygulayacaksınız.
+
+---
+
+## ⭐ 1. Distributed Tracing & Context Propagation (EN KRİTİK)
+
+### Amaç  
+Go → Kafka → Python boyunca **tek bir trace zinciri** oluşturmak.
+
+### Teknik İşleyiş  
+- **Go Producer:**  
+  - ddtrace span başlat  
+  - Trace ID & Span ID → Kafka Header’a enjekte et  
+
+- **Python Consumer:**  
+  - Header’dan trace ID’yi al  
+  - Aynı trace içinde “child span” oluştur  
+  - Böylece zincir kopmaz
+
+### Kütüphaneler  
+- Go → `gopkg.in/DataDog/dd-trace-go.v1`  
+- Python → `ddtrace`
+
+---
+
+## 📊 2. Custom Business Metrics (AI Modeli + İş Değeri)
+
+DogStatsD üzerinden gönderilecek metrikler:
+
+- `aero.model.rul_prediction`  
+- `aero.model.drift_score`  
+- `aero.data.sensor_anomaly_count`  
+- `aero.business.saved_cost` (sunumda en çok etkiyi yaratır)
+
+---
+
+## 🔗 3. Log Correlation
+
+Amaç: Loglar → Trace’lerle otomatik eşleşsin.
+
+**Yapılacaklar:**
+
+- Tüm logları **JSON formatında** bas  
+- İçine:  
+  - `dd.trace_id`  
+  - `dd.span_id`  
+  ekle
+
+Datadog bunları görünce trace/log otomatik bağlanır.
+
+---
+
+## 🎥 4. RUM + Session Replay (Frontend İzleme)
+
+- Next.js tarafına  
+@datadog/browser-rum
+
+paketi kurulacak.
+
+- Session Replay açılacak →  
+Jüri user hareketlerini **video gibi** görecek.
+
+---
+
+## 🚨 5. SLO + Alerting
+
+### SLO’lar
+- **Latency SLO:** %99 istek < 500ms  
+- **Availability SLO:** %99.9 uptime  
+
+### Alert Örneği
+- `aero.model.rul_prediction < 10`  
+→ Slack veya Email uyarısı  
+("Motor ömrü kritik seviyede!")
+
+---
+
+# 🤖 CLAUDE İÇİN HAZIR “DATADOG PROMPT” (KOPYALA-SAKLA)
+
+Claude’a Go veya Python kodu yazdırırken **her defasında ekle**:
+
+Datadog Implementation Requirements:
+
+Tracing: ddtrace kullanarak Kafka Header Propagation uygula.
+Trace ID'yi Kafka mesajına enjekte et (Producer) ve oradan oku (Consumer).
+
+Metrics: DogStatsD kullanarak custom metrik gönder
+(aero.xyz namespace'i ile).
+
+Logs: Logları JSON formatında bas ve içine dd.trace_id enjekte edildiğinden emin ol.
+
+Tagging: Tüm metriklere ve tracelere
+env:production,
+service:aero-sense,
+version:1.0
+etiketlerini ekle.
+
+
+# DATA IMP
+# ✈️ Ekstra Veri Katmanları ile “Impact + Creativity” Stratejisi  
+**Tarih:** 7 Aralık 2025  
+**Hedef:** Google Cloud Hackathon (Datadog & Confluent Tracks)  
+**Durum:** Bu doküman projeyi *uçuracak* yaratıcı veri stratejisini anlatır. Hiçbir şey atlanmamıştır.
+
+---
+
+# ✈️ 1. GERÇEK UÇUŞ VERİSİ — *OpenSky Network API*  
+### 🎯 Neden Game Changer?
+Sadece NASA simülasyon verisini kullanmak *sıradan bir hackathon projesi* yaratır.  
+Ama **gerçek zamanlı uçuş verisini** NASA veri seti ile senkronize edince ortaya *dijital ikiz (digital twin)* çıkar.
+
+### 📡 API Kaynağı  
+**OpenSky Network API — Ücretsiz**
+
+### 🧠 Fikir  
+Python (ya da Go) ile OpenSky API’ye gidiyoruz.  
+“Şu an havada hangi uçak var? Örneğin BA117 (London → New York)”  
+Bir uçak seçiyoruz.  
+
+### 🛫 Senaryo  
+OpenSky’dan gelen veriler:
+- Anlık *irtifa* (altitude)
+- Hız
+- Koordinat (lat/lon)
+- Tırmanma oranı (vertical rate)
+
+Simülasyon (NASA) verisi:
+- Motor sensörleri (temperature, pressure, fan speed…)
+
+### 🔥 Bağlantı (Fusion)
+- **Uçak tırmanıyorsa** → NASA verisinden “Climb mode” satırlarını
+- **Cruise'ta ise** → “Cruise mode” satırlarını  
+- Motor yük altındaysa → NASA sensörlerinde buna uygun veriler
+
+### 🏆 Jüriye Mesaj
+> “Biz sadece simülasyon oynatmıyoruz; şu an Atlantik üzerinde uçan gerçek bir uçağın **dijital ikizini** oluşturuyoruz.”
+
+Bu hackathonda seni öne taşıyacak en etkili *creativity* hamlesi budur.
+
+---
+
+# 📰 2. Web Scraping — *Aviation Herald*  
+### 🎯 Amaç: "Risk Intelligence Layer"
+
+**Kaynak:** The Aviation Herald  
+**Teknik:** Python + BeautifulSoup
+
+### 🛠️ Nasıl Çalışacak?
+- Script son 24 saatin haberlerini tarar.
+- “Engine vibration”, “fuel pressure anomaly” gibi anahtar kelimeleri arar.
+- Bir motor tipiyle ilgili yeni bir olay varsa → sistem bunu “context” olarak alır.
+
+### 🧠 Impact
+> “Dünyadaki güncel arıza trendlerini takip edip bakım ekiplerini proaktif uyarıyoruz.”
+
+Bu, “AI + Observability + Proactive Insights” üçlüsünün en üst noktasıdır.
+
+---
+
+# 🔄 3. Güncellenmiş Veri Birleştirme Stratejisi — *Fusion Engine*  
+Artık proje sadece “CSV okuyan bir backend” değil.  
+**3 Farklı veri kaynağını gerçek zamanlı birleştiren bir engine yazıyoruz.**
+
+| Veri Kaynağı | Tür | Rolü | Jüriye Etkisi |
+|--------------|-----|------|----------------|
+| **NASA CMAPSS** | Statik CSV | Motor iç sensörleri | Bilimsel doğruluk |
+| **OpenSky API** | Canlı | Uçağın iskeleti: konum, hız, irtifa | Gerçekçilik, şaşırtıcı canlılık |
+| **OpenWeatherMap** | Canlı | Dış ortam & hava etkileri | Çevresel farkındalık |
+
+Bu üçlü bir araya geldiğinde:
+- Motor yükünü OpenSky belirliyor  
+- Motor davranışını NASA veri seti temsil ediyor  
+- Dış koşulları OpenWeather belirliyor
+
+**Buna hackathonda “Fusion Engine” diyeceğiz.**
+
+---
+
+# 🛠️ 4. Teknik Olarak Nasıl Yaparız? (Basit!)  
+
+## 📍 Adım 1 — OpenSky Wrapper
+Go ingestion servisine küçük bir fonksiyon eklenir:
+
+```go
+func fetchAircraft() Aircraft {
+    // Istanbul üstündeki uçakları sorgula
+    // Bir tane uçak seç
+    // Latitude, longitude, altitude, verticalRate döndür
+}
+
+📍 Adım 2 — “Flight Mode” Belirleme
+
+if altitudeIncreasing {
+    mode = "CLIMB"
+} else if altitudeStable {
+    mode = "CRUISE"
+} else {
+    mode = "DESCEND"
+}
+
+📍 Adım 3 — NASA Verisinden Mod’a Uygun Satır Çekme
+Python tarafında da yapılabilir:
+
+def get_cmapss_slice(mode):
+    if mode == "CLIMB":
+        return df[df["alt"] < 5000]
+    if mode == "CRUISE":
+        return df[df["alt"] > 20000]
+📍 Adım 4 — Hepsini Tek Mesaja Birleştirme
+Go ingestion servisi:
+
+{
+  "flight": {
+    "lat": 41.28,
+    "lon": 29.0,
+    "alt": 25000
+  },
+  "weather": {
+    "temp": -52,
+    "wind_speed": 34
+  },
+  "engine": {
+    "n1": 0.92,
+    "temp": 740,
+    "fuel_flow": 0.84
+  }
+}
+
+# 🚀 Uçağın Dijital İkizi — Mükemmel Sunum Anlatısı
+
+## 🔄 Event Flow (Basit ve Net)
+- Bu mesaj **Kafka’ya** gider.  
+- **Python AI servisi** bu mesajı tüketir.  
+- **Datadog Trace ID**, Kafka header üzerinden **uçtan uca** taşınır.  
+  → Monitoring + Observability %100
+
+---
+
+## 💡 5. Neden Bu Strateji? — *Jüriye Anlatacağın Altın Cümle*
+> **“Gerçek motor verileri ticari sır olduğu için NASA’nın CMAPSS fizik modelini kullandık.  
+> Ancak bu modeli statik bırakmadık; OpenSky (gerçek uçuş) + OpenWeather (gerçek hava) verilerini anlık olarak birleştirip uçağın **dijital ikizini** oluşturduk.”**
+
+Bu cümle **seni diğer takımlardan ayıran kırılma noktasıdır**.
+
+📌 Sadece CSV ile çalışanlardan **10 kat** öndesin.
+
+---
+
+# 🧩 6. Projedeki Veri Rolleri — *Final & Sunuma Hazır*
+Uçağı yaşayan bir varlık gibi düşün: İskelet, deri, iç organlar.
+
+## 🦴 1. İskelet (Gerçek — Canlı Veri)
+- **Kaynak:** OpenSky Network  
+- **Rol:** Uçağın pozisyon ve hareket durumu  
+- **Etkisi:** “Sistem şu an New York üzerindeki uçuşları izliyor.”
+
+## 🧥 2. Deri (Gerçek — Canlı Veri)
+- **Kaynak:** OpenWeatherMap  
+- **Rol:** Çevresel koşullar  
+- **Etkisi:** “Hava -50°C olduğu için motor verim seviyesi değişiyor.”
+
+## 🔧 3. İç Organlar (Simülasyon — NASA)
+- **Kaynak:** CMAPSS (NASA fizik tabanlı motor modeli)  
+- **Rol:** Motor sensör verileri  
+- **Etkisi:** “Gerçek motor davranışını NASA'nın fiziksel modeliyle sürdürüyoruz.”
+
+---
+
+# 🏁 SONUÇ — *Jürilik Özet*
+- ✓ **Impact:** %100  
+- ✓ **Creativity:** %100  
+- ✓ **Datadog + Kafka + Vertex AI** için kusursuz veri akışı  
+- ✓ Jüri önünde **teknik + hikâye anlatısı** mükemmel uyum
+
+
+---
+
+# 🔚 SON
